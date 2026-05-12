@@ -1,0 +1,330 @@
+.frames-content {
+  --background: #f0f4f8;
+  padding-bottom: 120px;
+}
+
+/* ── Toolbar ──────────────────────────────── */
+.toolbar-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.selection-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: rgba(0, 119, 182, 0.08);
+  border-bottom: 1px solid rgba(0, 119, 182, 0.15);
+
+  .selection-count {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+    color: var(--ion-color-primary);
+
+    ion-icon { font-size: 1.1rem; }
+    strong { font-weight: 700; }
+  }
+
+  ion-button {
+    --border-radius: 8px;
+    height: 34px;
+    font-size: 0.85rem;
+  }
+}
+
+/* ── Frames Grid ──────────────────────────── */
+.frames-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 14px;
+  padding: 16px;
+
+  @media (min-width: 600px) {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+
+  @media (min-width: 900px) {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+}
+
+.frame-item {
+  background: #fff;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.25s ease;
+  border: 3px solid transparent;
+
+  &.selected {
+    border-color: var(--ion-color-primary);
+    box-shadow: 0 4px 18px rgba(0, 119, 182, 0.25);
+  }
+
+  &.deselected {
+    opacity: 0.55;
+    border-color: transparent;
+  }
+}
+
+.frame-thumb-wrap {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16/9;
+  cursor: pointer;
+  background: #0d1b2a;
+
+  &:hover .frame-overlay { opacity: 1; }
+}
+
+.frame-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.2s;
+
+  .frame-thumb-wrap:hover & { transform: scale(1.05); }
+}
+
+.frame-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+
+  .expand-icon { font-size: 2rem; color: #fff; }
+}
+
+.frame-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px 4px;
+}
+
+.frame-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  .frame-num {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--ion-color-primary);
+  }
+
+  .frame-time {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.72rem;
+    color: var(--ion-color-medium);
+
+    ion-icon { font-size: 0.8rem; }
+  }
+}
+
+.quality-badge {
+  font-size: 0.72rem;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 8px;
+
+  ion-icon { font-size: 0.75rem; }
+}
+
+.frame-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  font-size: 0.82rem;
+  color: var(--ion-color-medium);
+  transition: background 0.15s;
+
+  &:hover { background: rgba(0, 119, 182, 0.06); }
+}
+
+.select-checkbox {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 2px solid var(--ion-color-medium);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+
+  &.checked {
+    background: var(--ion-color-primary);
+    border-color: var(--ion-color-primary);
+    color: #fff;
+
+    ion-icon { font-size: 0.9rem; }
+  }
+}
+
+/* ── Bottom Bar ───────────────────────────── */
+.bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12);
+  z-index: 100;
+
+  .bottom-info {
+    font-size: 0.82rem;
+    color: var(--ion-color-medium);
+    text-align: center;
+    margin-bottom: 8px;
+  }
+
+  ion-button {
+    --border-radius: 12px;
+    height: 52px;
+    font-weight: 600;
+    font-size: 1rem;
+  }
+}
+
+/* ── Identifying Overlay ──────────────────── */
+.identifying-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 4, 94, 0.75);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.identifying-box {
+  background: #fff;
+  border-radius: 24px;
+  padding: 40px 32px;
+  max-width: 340px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+
+  h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--ion-color-primary);
+    margin: 16px 0 8px;
+  }
+
+  p {
+    font-size: 0.88rem;
+    color: var(--ion-color-medium);
+    margin: 0 0 20px;
+  }
+
+  ion-progress-bar {
+    --border-radius: 4px;
+  }
+}
+
+.identify-progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+  color: var(--ion-color-medium);
+
+  strong {
+    color: var(--ion-color-primary);
+    font-weight: 700;
+  }
+}
+
+.id-anim {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.orbit-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  border-top-color: var(--ion-color-primary);
+  border-right-color: var(--ion-color-secondary);
+  animation: spin 1.5s linear infinite;
+}
+
+.orbit-dot {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 10px;
+  height: 10px;
+  background: var(--ion-color-secondary);
+  border-radius: 50%;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.id-whale-icon {
+  font-size: 2rem;
+  color: var(--ion-color-primary);
+}
+
+/* ── Preview Modal ────────────────────────── */
+.preview-content {
+  --background: #f0f4f8;
+}
+
+.preview-image-wrap {
+  background: #0d1b2a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.preview-image {
+  width: 100%;
+  max-height: 60vh;
+  object-fit: contain;
+}
+
+.preview-meta {
+  margin: 12px 16px 0;
+  background: #fff;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.preview-actions {
+  padding: 16px;
+
+  ion-button { --border-radius: 12px; }
+}
+

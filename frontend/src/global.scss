@@ -1,0 +1,56 @@
+/* Ionic Global Styles */
+@import "@ionic/angular/css/core.css";
+@import "@ionic/angular/css/normalize.css";
+@import "@ionic/angular/css/structure.css";
+@import "@ionic/angular/css/typography.css";
+@import "@ionic/angular/css/display.css";
+@import "@ionic/angular/css/padding.css";
+@import "@ionic/angular/css/float-elements.css";
+@import "@ionic/angular/css/text-alignment.css";
+@import "@ionic/angular/css/text-transformation.css";
+@import "@ionic/angular/css/flex-utils.css";
+
+* {
+  box-sizing: border-box;
+}
+
+ion-toolbar {
+  --background: var(--ion-color-primary);
+  --color: var(--ion-color-primary-contrast);
+}
+
+.whale-card {
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 119, 182, 0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 119, 182, 0.25);
+  }
+}
+
+.confidence-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--ion-color-primary), var(--ion-color-secondary));
+}
+
+.badge-new {
+  background: var(--ion-color-warning);
+  color: #000;
+  border-radius: 12px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge-match {
+  background: var(--ion-color-success);
+  color: #000;
+  border-radius: 12px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+

@@ -1,0 +1,202 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>
+      <div class="toolbar-title">
+        <ion-icon name="analytics-outline"></ion-icon>
+        Результаты идентификации
+      </div>
+    </ion-title>
+    <ion-buttons slot="end">
+      <ion-button fill="clear" color="light" (click)="newSession()">
+        <ion-icon name="add-circle-outline" slot="start"></ion-icon>
+        Новое видео
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+
+  <!-- Stats bar -->
+  <div class="stats-bar">
+    <div class="stat-pill pending" [class.highlight]="pendingCount > 0">
+      <ion-icon name="time-outline"></ion-icon>
+      <span>{{ pendingCount }} ожидает</span>
+    </div>
+    <div class="stat-pill approved">
+      <ion-icon name="checkmark-circle-outline"></ion-icon>
+      <span>{{ approvedCount }} одобрено</span>
+    </div>
+    <div class="stat-pill rejected">
+      <ion-icon name="close-circle-outline"></ion-icon>
+      <span>{{ rejectedCount }} отклонено</span>
+    </div>
+  </div>
+</ion-header>
+
+<ion-content class="results-content">
+
+  <!-- All decided banner -->
+  <div class="all-decided-banner" *ngIf="allDecided && results.length > 0">
+    <ion-icon name="checkmark-done-circle-outline"></ion-icon>
+    <div>
+      <strong>Все результаты обработаны!</strong>
+      <p>Одобрено: {{ approvedCount }} | Отклонено: {{ rejectedCount }}</p>
+    </div>
+    <ion-button size="small" color="primary" (click)="finishSession()">
+      Завершить
+    </ion-button>
+  </div>
+
+  <!-- Result cards -->
+  <div class="results-list">
+    <ion-card
+      *ngFor="let result of results; let i = index"
+      class="result-card"
+      [class.approved]="result.decision === 'approved'"
+      [class.rejected]="result.decision === 'rejected'">
+
+      <!-- Card header -->
+      <div class="result-header" (click)="toggleExpand(result)">
+        <div class="result-header-left">
+          <div class="result-num">Кит #{{ i + 1 }}</div>
+          <!-- New whale badge -->
+          <ion-badge *ngIf="result.is_new" color="warning" class="new-badge">
+            <ion-icon name="star-outline"></ion-icon>
+            Новый кит
+          </ion-badge>
+          <!-- Top match badge -->
+          <ion-badge
+            *ngIf="!result.is_new && topMatch(result)"
+            [color]="confidenceColor(topMatch(result)!.confidence)"
+            class="match-badge">
+            <ion-icon name="link-outline"></ion-icon>
+            ID {{ topMatch(result)!.whale_id }} — {{ confidencePct(topMatch(result)!.confidence) }}%
+          </ion-badge>
+        </div>
+
+        <!-- Decision indicator -->
+        <div class="decision-chip" [class]="result.decision">
+          <ion-icon
+            [name]="result.decision === 'approved' ? 'checkmark-circle' :
+                    result.decision === 'rejected' ? 'close-circle' : 'time-outline'">
+          </ion-icon>
+          {{ result.decision === 'approved' ? 'Одобрено' :
+             result.decision === 'rejected' ? 'Отклонено' : 'Ожидание' }}
+        </div>
+
+        <ion-icon [name]="result.expanded ? 'chevron-up-outline' : 'chevron-down-outline'" class="expand-arrow"></ion-icon>
+      </div>
+
+      <!-- Expandable body -->
+      <div class="result-body" *ngIf="result.expanded">
+        <!-- Frame thumbnail -->
+        <div class="frame-preview-wrap" *ngIf="result.frame_url">
+          <img [src]="result.frame_url" class="frame-preview-img" alt="Кадр кита" />
+          <div class="frame-preview-label">Анализируемый кадр</div>
+        </div>
+
+        <!-- NEW WHALE section -->
+        <div class="new-whale-section" *ngIf="result.is_new">
+          <div class="new-whale-icon-wrap">
+            <ion-icon name="add-circle-outline" color="warning"></ion-icon>
+          </div>
+          <h3>Новый кит не найден в каталоге</h3>
+          <p>Совпадений с имеющимися записями не обнаружено.<br />
+             Рекомендуется добавить нового кита в каталог.</p>
+          <div class="no-matches-note">
+            <ion-icon name="information-circle-outline" color="medium"></ion-icon>
+            <span>Слабые совпадения (если есть) показаны ниже</span>
+          </div>
+        </div>
+
+        <!-- Matches list -->
+        <div class="matches-section" *ngIf="result.matches?.length">
+          <h4 class="matches-title">
+            {{ result.is_new ? 'Ближайшие совпадения (не подтверждены)' : 'Топ совпадений' }}
+          </h4>
+
+          <div class="match-item" *ngFor="let match of result.matches; let mi = index">
+            <div class="match-rank">{{ mi + 1 }}</div>
+
+            <!-- Catalog thumbnail -->
+            <div class="match-thumb-wrap">
+              <img
+                *ngIf="match.thumbnail_url; else noThumb"
+                [src]="match.thumbnail_url"
+                class="match-thumb"
+                [alt]="'Кит ' + match.whale_id" />
+              <ng-template #noThumb>
+                <div class="match-thumb-placeholder">
+                  <ion-icon name="fish-outline"></ion-icon>
+                </div>
+              </ng-template>
+            </div>
+
+            <!-- Match info -->
+            <div class="match-info">
+              <div class="match-id">
+                <strong>ID: {{ match.whale_id }}</strong>
+                <span *ngIf="match.name" class="match-name">{{ match.name }}</span>
+              </div>
+              <!-- Confidence bar -->
+              <div class="conf-bar-wrap">
+                <div class="conf-bar-track">
+                  <div
+                    class="conf-bar-fill"
+                    [style.width]="confidencePct(match.confidence) + '%'"
+                    [class]="'fill-' + confidenceColor(match.confidence)">
+                  </div>
+                </div>
+                <span class="conf-pct" [attr.data-color]="confidenceColor(match.confidence)">
+                  {{ confidencePct(match.confidence) }}%
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action buttons (only if decision is pending) -->
+        <div class="action-buttons" *ngIf="result.decision === 'pending'">
+          <ion-button
+            color="success"
+            expand="block"
+            class="approve-btn"
+            (click)="approve(result)">
+            <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
+            {{ result.is_new ? 'Одобрить — новый кит' : 'Подтвердить совпадение' }}
+          </ion-button>
+          <ion-button
+            color="danger"
+            expand="block"
+            fill="outline"
+            class="reject-btn"
+            (click)="reject(result)">
+            <ion-icon name="close-circle-outline" slot="start"></ion-icon>
+            Отклонить
+          </ion-button>
+        </div>
+
+        <!-- Already decided — show undo -->
+        <div class="decided-row" *ngIf="result.decision !== 'pending'">
+          <div class="decided-label" [class]="result.decision">
+            <ion-icon [name]="result.decision === 'approved' ? 'checkmark-circle' : 'close-circle'"></ion-icon>
+            {{ result.decision === 'approved' ? 'Одобрено' : 'Отклонено' }}
+          </div>
+          <ion-button fill="clear" size="small" color="medium" (click)="resetDecision(result)">
+            <ion-icon name="arrow-undo-outline" slot="start"></ion-icon>
+            Отменить
+          </ion-button>
+        </div>
+      </div>
+    </ion-card>
+  </div>
+
+  <!-- Bottom spacer -->
+  <div style="height: 32px"></div>
+</ion-content>
+
+<!-- Bottom FAB: finish session -->
+<ion-fab vertical="bottom" horizontal="end" slot="fixed" *ngIf="allDecided">
+  <ion-fab-button color="primary" (click)="finishSession()">
+    <ion-icon name="checkmark-done-outline"></ion-icon>
+  </ion-fab-button>
+</ion-fab>
+

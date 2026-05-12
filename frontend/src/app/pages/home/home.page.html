@@ -1,0 +1,204 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>
+      <div class="toolbar-title">
+        <ion-icon name="fish-outline" class="toolbar-icon"></ion-icon>
+        WhaleDetector
+      </div>
+    </ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<!-- Single hidden file input — always present in DOM -->
+<input
+  #fileInput
+  type="file"
+  accept="video/*"
+  style="display:none; position:absolute; pointer-events:none"
+  (change)="onFileSelected($event)" />
+
+<ion-content class="home-content">
+  <div class="hero-section">
+    <div class="hero-text">
+      <h1>Идентификация<br />гренландских китов</h1>
+      <p>Загрузите видео — ИИ автоматически выберет лучшие кадры<br />и сравнит китов с каталогом Охотского моря</p>
+    </div>
+  </div>
+
+  <!-- ── IDLE: No file selected ──────────────────────────── -->
+  <div class="content-wrapper" *ngIf="stage === 'idle' && !selectedVideo">
+    <ion-card class="upload-card">
+      <ion-card-content>
+        <div
+          class="drop-zone"
+          [class.drag-over]="isDragOver"
+          (dragover)="onDragOver($event)"
+          (dragleave)="onDragLeave()"
+          (drop)="onDrop($event)"
+          (click)="openFileDialog()">
+          <ion-icon name="cloud-upload-outline" class="drop-icon"></ion-icon>
+          <p class="drop-title">Перетащите видеофайл сюда</p>
+          <p class="drop-sub">или нажмите для выбора файла</p>
+          <p class="drop-formats">MP4, AVI, MOV, MKV и другие форматы</p>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- ── IDLE: File selected, ready to upload ───────────── -->
+  <div class="content-wrapper" *ngIf="stage === 'idle' && selectedVideo">
+    <ion-card class="upload-card selected-card">
+      <ion-card-content>
+        <div class="video-preview-container">
+          <video
+            #videoPreview
+            class="video-preview"
+            [src]="videoPreviewUrl ?? ''"
+            controls
+            preload="metadata">
+          </video>
+        </div>
+
+        <div class="file-info">
+          <ion-icon name="videocam-outline" color="primary"></ion-icon>
+          <div class="file-meta">
+            <span class="file-name">{{ videoName }}</span>
+            <span class="file-size">{{ videoSize }}</span>
+          </div>
+          <ion-button fill="clear" color="danger" (click)="clearVideo()">
+            <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+          </ion-button>
+        </div>
+
+        <ion-button
+          expand="block"
+          class="upload-btn"
+          color="primary"
+          size="large"
+          (click)="startProcessing()">
+          <ion-icon name="search-outline" slot="start"></ion-icon>
+          Обработать видео
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- ── UPLOADING ───────────────────────────────────────── -->
+  <div class="content-wrapper processing-wrapper" *ngIf="stage === 'uploading'">
+    <ion-card class="process-card">
+      <ion-card-content>
+        <div class="process-animation">
+          <div class="wave-container">
+            <div class="wave wave1"></div>
+            <div class="wave wave2"></div>
+            <div class="wave wave3"></div>
+          </div>
+          <ion-icon name="cloud-upload-outline" class="process-icon"></ion-icon>
+        </div>
+        <h2 class="process-title">Загрузка видео…</h2>
+        <p class="process-sub">{{ uploadProgress }}% загружено</p>
+        <ion-progress-bar
+          [value]="uploadProgress / 100"
+          color="primary">
+        </ion-progress-bar>
+        <p class="process-filename">{{ videoName }}</p>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- ── PROCESSING ─────────────────────────────────────── -->
+  <div class="content-wrapper processing-wrapper" *ngIf="stage === 'processing'">
+    <ion-card class="process-card">
+      <ion-card-content>
+        <div class="process-animation">
+          <div class="wave-container">
+            <div class="wave wave1"></div>
+            <div class="wave wave2"></div>
+            <div class="wave wave3"></div>
+          </div>
+          <ion-spinner name="crescent" color="primary" class="process-spinner"></ion-spinner>
+        </div>
+        <h2 class="process-title">Анализ видео</h2>
+        <p class="process-sub">{{ processingMessage }}</p>
+        <ion-progress-bar
+          *ngIf="processingProgress > 0"
+          [value]="processingProgress / 100"
+          color="secondary">
+        </ion-progress-bar>
+        <ion-progress-bar
+          *ngIf="processingProgress <= 0"
+          type="indeterminate"
+          color="secondary">
+        </ion-progress-bar>
+        <div class="process-steps">
+          <div class="step" [class.active]="processingStage === 'detection' || processingStage === 'extraction' || processingStage === 'scoring'">
+            <ion-icon name="eye-outline"></ion-icon>
+            <span>Детекция</span>
+          </div>
+          <ion-icon name="chevron-forward-outline" class="step-arrow"></ion-icon>
+          <div class="step" [class.active]="processingStage === 'extraction' || processingStage === 'scoring'">
+            <ion-icon name="images-outline"></ion-icon>
+            <span>Извлечение</span>
+          </div>
+          <ion-icon name="chevron-forward-outline" class="step-arrow"></ion-icon>
+          <div class="step" [class.active]="processingStage === 'scoring'">
+            <ion-icon name="star-outline"></ion-icon>
+            <span>Оценка</span>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- ── ERROR ───────────────────────────────────────────── -->
+  <div class="content-wrapper" *ngIf="stage === 'error'">
+    <ion-card class="error-card">
+      <ion-card-content>
+        <div class="error-icon-wrap">
+          <ion-icon name="alert-circle-outline" color="danger" class="error-icon"></ion-icon>
+        </div>
+        <h2 class="error-title">Ошибка обработки</h2>
+        <p class="error-message">{{ errorMessage }}</p>
+        <ion-button expand="block" color="medium" (click)="retry()">
+          <ion-icon name="refresh-outline" slot="start"></ion-icon>
+          Попробовать снова
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- ── Info cards ─────────────────────────────────────── -->
+  <div class="info-section" *ngIf="stage === 'idle'">
+    <h3 class="info-title">Как это работает</h3>
+    <ion-grid>
+      <ion-row>
+        <ion-col size="12" size-md="4">
+          <div class="info-card">
+            <ion-icon name="videocam-outline" color="primary"></ion-icon>
+            <h4>1. Загрузка</h4>
+            <p>Загрузите видео с наблюдением за китами в любом формате</p>
+          </div>
+        </ion-col>
+        <ion-col size="12" size-md="4">
+          <div class="info-card">
+            <ion-icon name="scan-outline" color="secondary"></ion-icon>
+            <h4>2. Детекция</h4>
+            <p>ИИ выберет 5-15 лучших кадров, где кит хорошо виден</p>
+          </div>
+        </ion-col>
+        <ion-col size="12" size-md="4">
+          <div class="info-card">
+            <ion-icon name="people-outline" color="tertiary"></ion-icon>
+            <h4>3. Идентификация</h4>
+            <p>Сравнение с каталогом и 5 наиболее вероятных совпадений</p>
+          </div>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+  </div>
+</ion-content>
+
+
+
+
+

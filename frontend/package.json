@@ -1,0 +1,37 @@
+{
+  "name": "whale-detector-frontend",
+  "version": "0.1.0",
+  "author": "Artniz23",
+  "private": true,
+  "main": "app.js",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve --proxy-config proxy.conf.json --open",
+    "build": "ng build",
+    "build:prod": "ng build --configuration=production --output-hashing=all",
+    "lint": "ng lint",
+    "electron": "electron .",
+    "electron-build": "ng build && electron ."
+  },
+  "dependencies": {
+    "@angular/common": "^16.2.0",
+    "@angular/compiler": "^16.2.0",
+    "@angular/core": "^16.2.0",
+    "@angular/forms": "^16.2.0",
+    "@angular/platform-browser": "^16.2.0",
+    "@angular/platform-browser-dynamic": "^16.2.0",
+    "@angular/router": "^16.2.0",
+    "@ionic/angular": "^7.8.6",
+    "electron": "^41.2.0",
+    "ionicons": "^7.4.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.6.0",
+    "zone.js": "~0.13.3"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^16.2.0",
+    "@angular/cli": "^16.2.0",
+    "@angular/compiler-cli": "^16.2.0",
+    "typescript": "~5.1.6"
+  }
+}
