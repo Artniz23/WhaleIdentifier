@@ -1,11 +1,11 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { Frame, IdentificationResult } from '../models/whale.models';
+import { Track, IdentificationResult } from '../models/whale.models';
 
 @Injectable({ providedIn: 'root' })
 export class WhaleStateService {
   private _jobId = new BehaviorSubject<string | null>(null);
-  private _frames = new BehaviorSubject<Frame[]>([]);
+  private _frames = new BehaviorSubject<Track[]>([]);
   private _results = new BehaviorSubject<IdentificationResult[]>([]);
   private _selectedVideo = new BehaviorSubject<File | null>(null);
   private _videoPreviewUrl = new BehaviorSubject<string | null>(null);
@@ -17,13 +17,13 @@ export class WhaleStateService {
   readonly videoPreviewUrl$ = this._videoPreviewUrl.asObservable();
 
   get jobId(): string | null { return this._jobId.value; }
-  get frames(): Frame[] { return this._frames.value; }
+  get frames(): Track[] { return this._frames.value; }
   get results(): IdentificationResult[] { return this._results.value; }
   get selectedVideo(): File | null { return this._selectedVideo.value; }
   get videoPreviewUrl(): string | null { return this._videoPreviewUrl.value; }
 
   setJobId(id: string): void { this._jobId.next(id); }
-  setFrames(frames: Frame[]): void { this._frames.next(frames); }
+  setTracks(tracks: Track[]): void { this._frames.next(tracks); }
   setResults(results: IdentificationResult[]): void { this._results.next(results); }
 
   setVideo(file: File): void {

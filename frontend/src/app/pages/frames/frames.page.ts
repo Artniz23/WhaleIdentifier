@@ -5,9 +5,9 @@ import { Subscription } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import { WhaleApiService } from '../../services/whale-api.service';
 import { WhaleStateService } from '../../services/whale-state.service';
-import { Frame } from '../../models/whale.models';
+import { Track } from '../../models/whale.models';
 
-interface SelectableFrame extends Frame {
+interface SelectableFrame extends Track {
   selected: boolean;
 }
 

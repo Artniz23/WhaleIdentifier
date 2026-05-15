@@ -14,6 +14,11 @@ export interface JobStatus {
   results?: IdentificationResult[];
 }
 
+export interface Track {
+  track_id: string;
+  frames: Frame[];
+}
+
 export interface Frame {
   id: string;
   url: string;

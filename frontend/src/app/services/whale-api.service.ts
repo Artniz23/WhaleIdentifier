@@ -6,7 +6,7 @@ import { environment } from '../../environments/environment';
 import {
   UploadResponse,
   JobStatus,
-  Frame,
+  Track,
   IdentifyResponse
 } from '../models/whale.models';
 
@@ -55,9 +55,9 @@ export class WhaleApiService {
   }
 
   /** Get best frames selected by the AI */
-  getFrames(jobId: string): Observable<Frame[]> {
-    return this.http.get<{ frames: Frame[] }>(`${this.base}/job/${jobId}/frames`).pipe(
-      map(r => r.frames)
+  getTracks(jobId: string): Observable<Track[]> {
+    return this.http.get<{ tracks: Track[] }>(`${this.base}/job/${jobId}/tracks`).pipe(
+      map(r => r.tracks)
     );
   }
 

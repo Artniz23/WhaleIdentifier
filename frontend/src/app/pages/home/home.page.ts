@@ -135,9 +135,9 @@ export class HomePage implements OnDestroy {
   }
 
   private fetchFrames(jobId: string): void {
-    const sub = this.api.getFrames(jobId).subscribe({
-      next: frames => {
-        this.state.setFrames(frames);
+    const sub = this.api.getTracks(jobId).subscribe({
+      next: tracks => {
+        this.state.setTracks(tracks);
         this.stage = 'done';
         this.router.navigate(['/frames']);
       },
