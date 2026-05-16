@@ -38,6 +38,40 @@
 }
 
 /* ── Frames Grid ──────────────────────────── */
+.tracks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+}
+
+.track-section {
+  background: rgba(255, 255, 255, 0.75);
+  border-radius: 14px;
+  padding: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+.track-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 2px 4px 10px;
+
+  h3 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--ion-color-primary);
+  }
+
+  span {
+    font-size: 0.78rem;
+    color: var(--ion-color-medium);
+  }
+}
+
 .frames-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -51,6 +85,10 @@
   @media (min-width: 900px) {
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   }
+}
+
+.track-grid {
+  padding: 0;
 }
 
 .frame-item {

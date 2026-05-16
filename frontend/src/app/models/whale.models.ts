@@ -22,6 +22,7 @@ export interface Track {
 export interface Frame {
   id: string;
   url: string;
+  annotated_url: string;
   score: number;       // quality score 0-1
   timestamp?: number;  // seconds in video
   thumbnail_url?: string;

@@ -62,47 +62,56 @@
     </div>
   </div>
 
-  <!-- Frames grid -->
-  <div class="frames-grid">
-    <div
-      *ngFor="let frame of frames; let i = index"
-      class="frame-item"
-      [class.selected]="frame.selected"
-      [class.deselected]="!frame.selected">
-
-      <!-- Thumbnail -->
-      <div class="frame-thumb-wrap" (click)="openPreview(frame)">
-        <img [src]="frame.url" [alt]="'Кадр ' + (i + 1)" class="frame-thumb" loading="lazy" />
-        <div class="frame-overlay">
-          <ion-icon name="expand-outline" class="expand-icon"></ion-icon>
-        </div>
+  <!-- Tracks and grouped frames -->
+  <div class="tracks-list">
+    <section class="track-section" *ngFor="let track of tracks; let ti = index">
+      <div class="track-header">
+        <h3>Трек {{ ti + 1 }}</h3>
+        <span>ID: {{ track.track_id }} | {{ track.frames.length }} кадр(ов)</span>
       </div>
 
-      <!-- Frame info row -->
-      <div class="frame-info">
-        <div class="frame-meta">
-          <span class="frame-num">#{{ i + 1 }}</span>
-          <span *ngIf="frame.timestamp !== undefined" class="frame-time">
-            <ion-icon name="time-outline"></ion-icon>
-            {{ formatTime(frame.timestamp!) }}
-          </span>
-        </div>
+      <div class="frames-grid track-grid">
+        <div
+          *ngFor="let frame of track.frames; let fi = index"
+          class="frame-item"
+          [class.selected]="frame.selected"
+          [class.deselected]="!frame.selected">
 
-        <!-- Quality badge -->
-        <ion-badge [color]="scoreColor(frame.score)" class="quality-badge">
-          <ion-icon name="star-outline"></ion-icon>
-          {{ scorePercent(frame.score) }}%
-        </ion-badge>
-      </div>
+          <!-- Thumbnail -->
+          <div class="frame-thumb-wrap" (click)="openPreview(frame)">
+            <img [src]="frame.annotated_url" [alt]="'Трек ' + (ti + 1) + ', кадр ' + (fi + 1)" class="frame-thumb" loading="lazy" />
+            <div class="frame-overlay">
+              <ion-icon name="expand-outline" class="expand-icon"></ion-icon>
+            </div>
+          </div>
 
-      <!-- Select toggle -->
-      <div class="frame-select" (click)="toggleFrame(frame)">
-        <div class="select-checkbox" [class.checked]="frame.selected">
-          <ion-icon [name]="frame.selected ? 'checkmark' : ''" ></ion-icon>
+          <!-- Frame info row -->
+          <div class="frame-info">
+            <div class="frame-meta">
+              <span class="frame-num">#{{ fi + 1 }}</span>
+              <span *ngIf="frame.timestamp !== undefined" class="frame-time">
+                <ion-icon name="time-outline"></ion-icon>
+                {{ formatTime(frame.timestamp!) }}
+              </span>
+            </div>
+
+            <!-- Quality badge -->
+            <ion-badge [color]="scoreColor(frame.score)" class="quality-badge">
+              <ion-icon name="star-outline"></ion-icon>
+              {{ scorePercent(frame.score) }}%
+            </ion-badge>
+          </div>
+
+          <!-- Select toggle -->
+          <div class="frame-select" (click)="toggleFrame(frame)">
+            <div class="select-checkbox" [class.checked]="frame.selected">
+              <ion-icon [name]="frame.selected ? 'checkmark' : ''" ></ion-icon>
+            </div>
+            <span>{{ frame.selected ? 'Выбран' : 'Выбрать' }}</span>
+          </div>
         </div>
-        <span>{{ frame.selected ? 'Выбран' : 'Выбрать' }}</span>
       </div>
-    </div>
+    </section>
   </div>
 
   <!-- Bottom action bar -->
@@ -137,7 +146,7 @@
     </ion-header>
     <ion-content class="preview-content" *ngIf="previewFrame">
       <div class="preview-image-wrap">
-        <img [src]="previewFrame.url" class="preview-image" />
+        <img [src]="previewFrame.annotated_url" [alt]="'Предпросмотр кадра ' + previewFrame.id" class="preview-image" />
       </div>
       <div class="preview-meta">
         <ion-item>

@@ -5,10 +5,15 @@ import { Subscription } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import { WhaleApiService } from '../../services/whale-api.service';
 import { WhaleStateService } from '../../services/whale-state.service';
-import { Track } from '../../models/whale.models';
+import { Track, Frame } from '../../models/whale.models';
 
-interface SelectableFrame extends Track {
+interface SelectableTrackFrame extends Frame {
+  trackId: string;
   selected: boolean;
+}
+
+interface SelectableTrack extends Track {
+  frames: SelectableTrackFrame[];
 }
 
 @Component({
@@ -17,10 +22,10 @@ interface SelectableFrame extends Track {
   styleUrls: ['./frames.page.scss']
 })
 export class FramesPage implements OnInit, OnDestroy {
-  frames: SelectableFrame[] = [];
+  tracks: SelectableTrack[] = [];
   isIdentifying = false;
   identifyProgress = 0;
-  previewFrame: SelectableFrame | null = null;
+  previewFrame: SelectableTrackFrame | null = null;
 
   private subs = new Subscription();
 
@@ -33,36 +38,48 @@ export class FramesPage implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    const frames = this.state.frames;
-    if (!frames.length) {
+    const tracks = this.state.frames;
+    if (!tracks.length) {
       this.router.navigate(['/home']);
       return;
     }
     // All frames selected by default
-    this.frames = frames.map(f => ({ ...f, selected: true }));
+    this.tracks = tracks.map(track => ({
+      ...track,
+      frames: track.frames.map(frame => ({
+        ...frame,
+        trackId: track.track_id,
+        selected: true
+      }))
+    }));
   }
 
-  get selectedFrames(): SelectableFrame[] {
-    return this.frames.filter(f => f.selected);
+  get allFrames(): SelectableTrackFrame[] {
+    return this.tracks.flatMap(track => track.frames);
+  }
+
+  get selectedFrames(): SelectableTrackFrame[] {
+    return this.allFrames.filter(f => f.selected);
   }
 
   get selectedCount(): number { return this.selectedFrames.length; }
-  get totalCount(): number { return this.frames.length; }
-  get allSelected(): boolean { return this.frames.every(f => f.selected); }
-  get noneSelected(): boolean { return this.frames.every(f => !f.selected); }
+  get totalCount(): number { return this.allFrames.length; }
+  get allSelected(): boolean {
+    return this.allFrames.length > 0 && this.allFrames.every(f => f.selected);
+  }
   get identifyProgressValue(): number {
     return Math.max(0, Math.min(100, Math.round(this.identifyProgress)));
   }
   get hasIdentifyProgress(): boolean { return this.identifyProgressValue > 0; }
 
-  toggleFrame(frame: SelectableFrame): void { frame.selected = !frame.selected; }
+  toggleFrame(frame: SelectableTrackFrame): void { frame.selected = !frame.selected; }
 
   toggleAll(): void {
     const selectAll = !this.allSelected;
-    this.frames.forEach(f => f.selected = selectAll);
+    this.allFrames.forEach(f => f.selected = selectAll);
   }
 
-  openPreview(frame: SelectableFrame): void { this.previewFrame = frame; }
+  openPreview(frame: SelectableTrackFrame): void { this.previewFrame = frame; }
   closePreview(): void { this.previewFrame = null; }
 
   scorePercent(score: number): number { return Math.round(score * 100); }
