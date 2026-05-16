@@ -48,7 +48,7 @@
   <!-- Result cards -->
   <div class="results-list">
     <ion-card
-      *ngFor="let result of results; let i = index"
+      *ngFor="let result of results"
       class="result-card"
       [class.approved]="result.decision === 'approved'"
       [class.rejected]="result.decision === 'rejected'">
@@ -56,7 +56,11 @@
       <!-- Card header -->
       <div class="result-header" (click)="toggleExpand(result)">
         <div class="result-header-left">
-          <div class="result-num">Кит #{{ i + 1 }}</div>
+          <div class="result-num">Трек {{ result.track_id }}</div>
+          <ion-badge color="primary" class="match-badge">
+            <ion-icon name="images-outline"></ion-icon>
+            {{ result.selected_frame_ids?.length || result.frames?.length || 0 }} кадр(ов)
+          </ion-badge>
           <!-- New whale badge -->
           <ion-badge *ngIf="result.is_new" color="warning" class="new-badge">
             <ion-icon name="star-outline"></ion-icon>
@@ -65,10 +69,10 @@
           <!-- Top match badge -->
           <ion-badge
             *ngIf="!result.is_new && topMatch(result)"
-            [color]="confidenceColor(topMatch(result)!.confidence)"
+            [color]="confidenceColor(topMatch(result)!.score)"
             class="match-badge">
             <ion-icon name="link-outline"></ion-icon>
-            ID {{ topMatch(result)!.whale_id }} — {{ confidencePct(topMatch(result)!.confidence) }}%
+            ID {{ topMatch(result)!.whale_id }} — {{ confidencePct(topMatch(result)!.score) }}%
           </ion-badge>
         </div>
 
@@ -88,9 +92,34 @@
       <!-- Expandable body -->
       <div class="result-body" *ngIf="result.expanded">
         <!-- Frame thumbnail -->
-        <div class="frame-preview-wrap" *ngIf="result.frame_url">
-          <img [src]="result.frame_url" class="frame-preview-img" alt="Кадр кита" />
-          <div class="frame-preview-label">Анализируемый кадр</div>
+        <div class="frame-preview-wrap" *ngIf="(result.frames[0]?.annotated_url || result.frames[0]?.crop_url || result.frames[0]?.frame_url) as previewUrl">
+          <img [src]="previewUrl" class="frame-preview-img" alt="Кадр трека" />
+          <div class="frame-preview-label">Превью группы кадров трека {{ result.track_id }}</div>
+        </div>
+
+        <!-- Selected frames group -->
+        <div class="matches-section" *ngIf="result.frames?.length">
+          <h4 class="matches-title">Кадры, отправленные на идентификацию</h4>
+          <div class="match-item" *ngFor="let frame of result.frames; let fi = index">
+            <div class="match-rank">{{ fi + 1 }}</div>
+            <div class="match-thumb-wrap">
+              <img
+                *ngIf="(frame.annotated_url || frame.crop_url || frame.frame_url) as url; else noFrameThumb"
+                [src]="url"
+                class="match-thumb"
+                [alt]="'Кадр ' + frame.frame_id" />
+              <ng-template #noFrameThumb>
+                <div class="match-thumb-placeholder">
+                  <ion-icon name="image-outline"></ion-icon>
+                </div>
+              </ng-template>
+            </div>
+            <div class="match-info">
+              <div class="match-id">
+                <strong>{{ frame.frame_id }}</strong>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- NEW WHALE section -->
@@ -141,12 +170,12 @@
                 <div class="conf-bar-track">
                   <div
                     class="conf-bar-fill"
-                    [style.width]="confidencePct(match.confidence) + '%'"
-                    [class]="'fill-' + confidenceColor(match.confidence)">
+                    [style.width]="confidencePct(match.score) + '%'"
+                    [class]="'fill-' + confidenceColor(match.score)">
                   </div>
                 </div>
-                <span class="conf-pct" [attr.data-color]="confidenceColor(match.confidence)">
-                  {{ confidencePct(match.confidence) }}%
+                <span class="conf-pct" [attr.data-color]="confidenceColor(match.score)">
+                  {{ confidencePct(match.score) }}%
                 </span>
               </div>
             </div>

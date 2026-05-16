@@ -1,12 +1,12 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { Track, IdentificationResult } from '../models/whale.models';
+import { Track, IdentificationGroupResult } from '../models/whale.models';
 
 @Injectable({ providedIn: 'root' })
 export class WhaleStateService {
   private _jobId = new BehaviorSubject<string | null>(null);
   private _frames = new BehaviorSubject<Track[]>([]);
-  private _results = new BehaviorSubject<IdentificationResult[]>([]);
+  private _results = new BehaviorSubject<IdentificationGroupResult[]>([]);
   private _selectedVideo = new BehaviorSubject<File | null>(null);
   private _videoPreviewUrl = new BehaviorSubject<string | null>(null);
 
@@ -18,13 +18,13 @@ export class WhaleStateService {
 
   get jobId(): string | null { return this._jobId.value; }
   get frames(): Track[] { return this._frames.value; }
-  get results(): IdentificationResult[] { return this._results.value; }
+  get results(): IdentificationGroupResult[] { return this._results.value; }
   get selectedVideo(): File | null { return this._selectedVideo.value; }
   get videoPreviewUrl(): string | null { return this._videoPreviewUrl.value; }
 
   setJobId(id: string): void { this._jobId.next(id); }
   setTracks(tracks: Track[]): void { this._frames.next(tracks); }
-  setResults(results: IdentificationResult[]): void { this._results.next(results); }
+  setResults(results: IdentificationGroupResult[]): void { this._results.next(results); }
 
   setVideo(file: File): void {
     // Revoke previous object URL to avoid memory leaks

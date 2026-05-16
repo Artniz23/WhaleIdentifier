@@ -11,11 +11,13 @@ export interface JobStatus {
   progress?: number;
   message?: string;
   stage?: string; // e.g. "detection", "extraction"
-  results?: IdentificationResult[];
+  results?: IdentificationGroupResult[];
 }
 
+export type TrackId = string | number;
+
 export interface Track {
-  track_id: string;
+  track_id: TrackId;
   frames: Frame[];
 }
 
@@ -30,7 +32,7 @@ export interface Frame {
 
 export interface WhaleMatch {
   whale_id: string;
-  confidence: number;  // 0-1
+  score: number;  // 0-1
   name?: string;
   thumbnail_url?: string;
 }
@@ -43,9 +45,36 @@ export interface IdentificationResult {
   approved?: boolean | null; // null = not decided yet
 }
 
+export interface IdentifySelection {
+  track_id: TrackId;
+  frame_ids: string[];
+}
+
+export interface GroupedResultFrame {
+  frame_id: string;
+  frame_url?: string;
+  crop_url?: string;
+  annotated_url?: string;
+}
+
+export interface IdentificationGroupResult {
+  track_id: TrackId;
+  selected_frame_ids: string[];
+  frames: GroupedResultFrame[];
+  status?: string;
+  is_new: boolean;
+  aggregated_distance?: number;
+  best_whale?: WhaleMatch | null;
+  nearest_known_whale?: WhaleMatch | null;
+  nearest_known_image?: string | null;
+  matches: WhaleMatch[];
+  per_image_results?: unknown[];
+  approved?: boolean | null; // null = not decided yet
+}
+
 export interface IdentifyResponse {
   job_id: string;
-  results?: IdentificationResult[];
+  results?: IdentificationGroupResult[];
 }
 
 // ========================

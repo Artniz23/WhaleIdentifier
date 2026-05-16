@@ -5,7 +5,7 @@ import { Subscription } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import { WhaleApiService } from '../../services/whale-api.service';
 import { WhaleStateService } from '../../services/whale-state.service';
-import { Track, Frame } from '../../models/whale.models';
+import { Track, Frame, IdentifySelection } from '../../models/whale.models';
 
 interface SelectableTrackFrame extends Frame {
   trackId: string;
@@ -44,11 +44,11 @@ export class FramesPage implements OnInit, OnDestroy {
       return;
     }
     // All frames selected by default
-    this.tracks = tracks.map(track => ({
+    this.tracks = tracks.map<SelectableTrack>(track => ({
       ...track,
-      frames: track.frames.map(frame => ({
+      frames: track.frames.map<SelectableTrackFrame>(frame => ({
         ...frame,
-        trackId: track.track_id,
+        trackId: String(track.track_id),
         selected: true
       }))
     }));
@@ -122,9 +122,14 @@ export class FramesPage implements OnInit, OnDestroy {
 
     this.isIdentifying = true;
     this.identifyProgress = 0;
-    const selectedIds = this.selectedFrames.map(f => f.id);
+    const selections: IdentifySelection[] = this.tracks
+      .map(track => ({
+        track_id: track.track_id,
+        frame_ids: track.frames.filter(frame => frame.selected).map(frame => frame.id)
+      }))
+      .filter(selection => selection.frame_ids.length > 0);
 
-    const sub = this.api.identifyWhales(jobId, selectedIds).pipe(
+    const sub = this.api.identifyWhales(jobId, selections).pipe(
       switchMap(response => {
         if (!response?.job_id) {
           throw new Error('Сервер не вернул ID задачи идентификации');

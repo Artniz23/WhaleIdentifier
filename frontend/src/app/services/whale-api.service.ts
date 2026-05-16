@@ -7,7 +7,8 @@ import {
   UploadResponse,
   JobStatus,
   Track,
-  IdentifyResponse
+  IdentifyResponse,
+  IdentifySelection
 } from '../models/whale.models';
 
 @Injectable({ providedIn: 'root' })
@@ -61,11 +62,11 @@ export class WhaleApiService {
     );
   }
 
-  /** Send selected frame IDs for whale identification */
-  identifyWhales(jobId: string, frameIds: string[]): Observable<IdentifyResponse> {
+  /** Send selected frame IDs grouped by track for whale identification */
+  identifyWhales(jobId: string, selections: IdentifySelection[]): Observable<IdentifyResponse> {
     return this.http.post<IdentifyResponse>(`${this.base}/identify`, {
       job_id: jobId,
-      frame_ids: frameIds
+      selections
     });
   }
 

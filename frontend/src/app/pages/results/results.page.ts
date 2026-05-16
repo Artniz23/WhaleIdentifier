@@ -2,9 +2,9 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { AlertController, ToastController } from '@ionic/angular';
 import { WhaleStateService } from '../../services/whale-state.service';
-import { IdentificationResult, WhaleMatch } from '../../models/whale.models';
+import { IdentificationGroupResult, WhaleMatch } from '../../models/whale.models';
 
-interface ResultVM extends IdentificationResult {
+interface ResultVM extends IdentificationGroupResult {
   decision: 'pending' | 'approved' | 'rejected';
   expanded: boolean;
 }
@@ -63,8 +63,8 @@ export class ResultsPage implements OnInit {
     result.decision = 'approved';
     this.showToast(
       result.is_new
-        ? '✅ Новый кит одобрен для добавления в каталог'
-        : `✅ Совпадение с китом ${this.topMatch(result)?.whale_id} подтверждено`,
+        ? `✅ Трек ${result.track_id}: новый кит одобрен для добавления в каталог`
+        : `✅ Трек ${result.track_id}: совпадение с китом ${this.topMatch(result)?.whale_id} подтверждено`,
       'success'
     );
   }
