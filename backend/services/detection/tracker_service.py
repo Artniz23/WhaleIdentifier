@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from pathlib import Path
 
-from services.quality_service import corners_to_bbox, polygon_area, compute_quality_obb, compute_geometry_features_obb, \
+from services.detection.quality_service import corners_to_bbox, polygon_area, compute_quality_obb, compute_geometry_features_obb, \
     crop_rotated_obb
 
 
@@ -324,6 +324,9 @@ def save_top_results_per_track(
     top_tracks=10,
     top_frames_per_track=3
 ):
+    from pathlib import Path
+    import cv2
+
     output_dir = Path(output_dir)
     full_dir = output_dir / "full"
     ann_dir = output_dir / "annotated"
@@ -333,28 +336,46 @@ def save_top_results_per_track(
     ann_dir.mkdir(parents=True, exist_ok=True)
     crop_dir.mkdir(parents=True, exist_ok=True)
 
-    saved = []
+    saved_tracks = []
 
     for track_rank, track in enumerate(tracks[:top_tracks], start=1):
-        track_id = track["track_id"]
-        frames = track["frames"][:top_frames_per_track]
+        track_id = track.get("track_id")
+        frames = track.get("frames", [])[:top_frames_per_track]
+
+        track_result = {
+            "track_id": track_id,
+            "track_rank": track_rank,
+            "start_frame": track.get("start_frame"),
+            "end_frame": track.get("end_frame"),
+            "start_time_sec": track.get("start_time_sec"),
+            "end_time_sec": track.get("end_time_sec"),
+            "frames": []
+        }
 
         for frame_rank, item in enumerate(frames, start=1):
-            frame = read_frame(video_path, item["frame_index"])
+            frame = read_frame(video_path, item.get("frame_index"))
             if frame is None:
-                print(f"[WARN] Не удалось прочитать кадр {item['frame_index']}")
+                print(f"[WARN] Не удалось прочитать кадр {item.get('frame_index')}")
                 continue
 
             det = item
-            crop = crop_rotated_obb(frame, det["corners"])
+            crop = crop_rotated_obb(frame, det.get("corners"))
             ann = draw_detection_obb(frame, det)
+
+            # score и timestamp могут быть в разных полях — возьмём доступныe варианты
+            score = None
+            if isinstance(det.get("scores"), dict):
+                score = det["scores"].get("final")
+            score = score if score is not None else det.get("score")
+
+            timestamp = det.get("time_sec", det.get("timestamp"))
 
             base_name = (
                 f"track_{track_id:03d}"
                 f"_trackRank_{track_rank:02d}"
                 f"_frameRank_{frame_rank:02d}"
-                f"_t_{item['time_sec']:.2f}s"
-                f"_score_{item['scores']['final']:.4f}.jpg"
+                f"_t_{(timestamp if timestamp is not None else 0):.2f}s"
+                f"_score_{(score if score is not None else 0):.4f}.jpg"
             )
 
             full_path = full_dir / base_name
@@ -365,21 +386,26 @@ def save_top_results_per_track(
             cv2.imwrite(str(ann_path), ann)
             cv2.imwrite(str(crop_path), crop)
 
-            saved.append({
-                "track_id": track_id,
-                "track_rank": track_rank,
-                "frame_rank": frame_rank,
-                "frame_index": item["frame_index"],
-                "time_sec": item["time_sec"],
-                "score": item["scores"]["final"],
-                "confidence": item["confidence"],
-                "bbox": item["bbox"],
-                "corners": item["corners"],
+            frame_entry = {
+                "id": det.get("id", f"{track_id}_{frame_rank}"),
+                "rank": frame_rank,
+                "score": score,
+                "timestamp": timestamp,
+                "confidence": det.get("confidence"),
+                "bbox": det.get("bbox"),
+                "corners": det.get("corners"),
+                "frame_index": det.get("frame_index"),
                 "full_path": str(full_path),
                 "annotated_path": str(ann_path),
                 "crop_path": str(crop_path),
-            })
+            }
+
+            track_result["frames"].append(frame_entry)
 
             print(f"[SAVED] {base_name}")
 
-    return saved
+        # Добавляем трек только если есть сохранённые кадры
+        if track_result["frames"]:
+            saved_tracks.append(track_result)
+
+    return saved_tracks

@@ -1,6 +1,6 @@
 from ultralytics import YOLO
 
-from services.tracker_service import process_video_obb_tracking, filter_tracks, rank_frames_within_tracks, \
+from services.detection.tracker_service import process_video_obb_tracking, filter_tracks, rank_frames_within_tracks, \
     save_top_results_per_track
 
 
