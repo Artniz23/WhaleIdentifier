@@ -1,0 +1,10 @@
+batch_size: 4
+image_size:
+- 600
+- 600
+max_epochs: 50
+model_name: tf_efficientnet_b7.ns_jft_in1k
+out_indices:
+- 3
+- 4
+n_splits: 5

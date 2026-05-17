@@ -1,0 +1,1 @@
+TRUNCATE TABLE image_embeddings, catalog_images, whale_observations, whales RESTART IDENTITY CASCADE;
