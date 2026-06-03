@@ -11,20 +11,20 @@ from services.reid.warmup import WarmupCosineLambda
 
 
 class SphereClassifier(LightningModule):
-    def __init__(self, cfg: dict, id_class_nums=None):
+    def __init__(self, cfg: dict, id_class_nums=None, backbone_pretrained: bool | None = None):
         super().__init__()
         if not isinstance(cfg, Config):
             cfg = Config(cfg)
         self.save_hyperparameters(cfg, ignore=["id_class_nums"])
         self.test_results_fp = None
 
+        pretrained = cfg.pretrained if backbone_pretrained is None else backbone_pretrained
+
         # NN architecture
         self.backbone = timm.create_model(
             cfg.model_name,
             in_chans=3,
-            # Включить при обучении
-            # pretrained=cfg.pretrained,
-            pretrained=False,
+            pretrained=pretrained,
             num_classes=0,
             features_only=True,
             out_indices=cfg.out_indices,

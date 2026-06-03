@@ -3,6 +3,8 @@ from pytorch_lightning import LightningDataModule
 from sklearn.model_selection import StratifiedKFold
 from torch.utils.data import DataLoader
 from services.reid.config import Config
+from services.reid.dataset import WhaleDataset
+
 
 class WhaleDataModule(LightningDataModule):
     def __init__(

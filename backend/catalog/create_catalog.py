@@ -151,7 +151,8 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = SphereClassifier.load_from_checkpoint(ckpt_path, map_location=device,
-                                                  id_class_nums=None)
+                                                  id_class_nums=None,
+                                                  backbone_pretrained=False)
 
     model = model.to(device)
     model.eval()

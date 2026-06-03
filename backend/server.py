@@ -33,7 +33,8 @@ ckpt_path = "models/reid/b7/0/best.ckpt"
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 reidModel = SphereClassifier.load_from_checkpoint(ckpt_path, map_location=device,
-                                              id_class_nums=None)
+                                              id_class_nums=None,
+                                              backbone_pretrained=False)
 
 reidModel = reidModel.to(device)
 reidModel.eval()

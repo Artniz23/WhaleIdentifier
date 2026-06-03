@@ -24,7 +24,7 @@ def train(
 ) -> Optional[float]:
     out_dir = f"{args.out_base_dir}/{args.exp_name}/{fold}"
     id_class_nums = df.individual_id.value_counts().sort_index().values
-    model = SphereClassifier(cfg, id_class_nums=id_class_nums)
+    model = SphereClassifier(cfg, id_class_nums=id_class_nums, backbone_pretrained=cfg.pretrained)
     data_module = WhaleDataModule(
         df, cfg, f"{args.in_base_dir}/train_images", fold
     )

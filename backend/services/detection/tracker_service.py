@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-from pathlib import Path
 
 from services.detection.quality_service import corners_to_bbox, polygon_area, compute_quality_obb, compute_geometry_features_obb, \
     crop_rotated_obb
