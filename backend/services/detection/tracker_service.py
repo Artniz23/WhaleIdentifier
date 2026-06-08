@@ -1,30 +1,42 @@
 import cv2
 import numpy as np
+from pathlib import Path
 
-from services.detection.quality_service import corners_to_bbox, polygon_area, compute_quality_obb, compute_geometry_features_obb, \
+from services.detection.quality_service import corners_to_bbox, polygon_area, compute_quality_obb, \
+    compute_geometry_features_obb, \
     crop_rotated_obb
 
 
 def extract_tracked_obb_instances(result, frame_shape):
+    """
+    Извлекает все OBB-детекции из результата YOLO-трекинга
+    и преобразует их в единый словарный формат.
+    """
+
     instances = []
 
+    # Если модель не вернула OBB-детекции — возвращаем пустой список.
     if result.obb is None or len(result.obb) == 0:
         return instances
 
+    # Получаем массивы классов, confidence, OBB-параметров и координат.
     cls_arr = result.obb.cls.cpu().numpy() if result.obb.cls is not None else None
     conf_arr = result.obb.conf.cpu().numpy() if result.obb.conf is not None else None
     xywhr_arr = result.obb.xywhr.cpu().numpy() if result.obb.xywhr is not None else None
     corners_arr = result.obb.xyxyxyxy.cpu().numpy() if result.obb.xyxyxyxy is not None else None
 
+    # Если трекер назначил track_id — извлекаем их.
     ids_arr = None
     if hasattr(result.obb, "id") and result.obb.id is not None:
         ids_arr = result.obb.id.cpu().numpy()
 
     for i in range(len(result.obb)):
         corners = corners_arr[i]
+        # Строим обычный bbox и вычисляем площадь ориентированного бокса.
         bbox = corners_to_bbox(corners, frame_shape)
         obb_area = polygon_area(corners)
 
+        # Формируем унифицированную структуру detection.
         instances.append({
             "track_id": int(ids_arr[i]) if ids_arr is not None else None,
             "is_tracked": ids_arr is not None,
@@ -38,34 +50,54 @@ def extract_tracked_obb_instances(result, frame_shape):
 
     return instances
 
+
 def is_valid_detection_for_tracking_save(
-    detection,
-    frame_shape,
-    min_conf=0.05,
-    min_area_ratio=0.001
+        detection,
+        frame_shape,
+        min_conf=0.05,
+        min_area_ratio=0.001
 ):
+    """
+    Проверяет, стоит ли сохранять detection
+    для дальнейшего анализа и ранжирования.
+    """
+
     geom = compute_geometry_features_obb(detection, frame_shape)
 
+    # Отбрасываем детекции с низкой уверенностью модели.
     if detection.get("confidence", 0.0) < min_conf:
         return False
 
+    # Отбрасываем слишком маленькие объекты.
     if geom["obb_area_ratio"] < min_area_ratio:
         return False
 
     return True
 
+
 def read_frame(video_path, frame_index):
+    """
+    Читает произвольный кадр видео по его индексу.
+    """
+
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
         raise ValueError(f"Не удалось открыть видео: {video_path}")
 
+    # Переходим к нужному кадру.
     cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
     ret, frame = cap.read()
     cap.release()
 
     return frame if ret else None
 
+
 def draw_detection_obb(frame, detection):
+    """
+    Рисует OBB-контур объекта и основную информацию
+    о качестве детекции.
+    """
+
     img = frame.copy()
     pts = np.array(detection["corners"], dtype=np.int32)
 
@@ -73,8 +105,10 @@ def draw_detection_obb(frame, detection):
     conf = detection["confidence"]
     track_id = detection.get("track_id")
 
+    # Отрисовываем ориентированный контур объекта.
     cv2.polylines(img, [pts], isClosed=True, color=(0, 255, 0), thickness=4)
 
+    # Добавляем подпись с ID трека и оценкой качества.
     x, y = pts[0]
     label = f"id={track_id} | q={score:.3f} | conf={conf:.3f}"
     cv2.putText(
@@ -88,19 +122,21 @@ def draw_detection_obb(frame, detection):
     )
     return img
 
+
 def process_video_obb_tracking(
-    video_path,
-    model,
-    tracker="bytetrack.yaml",
-    conf=0.10,
-    iou=0.50,
-    frame_step=1,
-    min_conf_for_save=0.05,
-    min_area_ratio=0.001,
-    save_untracked=False
+        video_path,
+        model,
+        tracker="bytetrack.yaml",
+        conf=0.10,
+        iou=0.50,
+        frame_step=1,
+        min_conf_for_save=0.05,
+        min_area_ratio=0.001,
+        save_untracked=False
 ):
     video_path = str(video_path)
 
+    # Открываем видео и читаем его метаданные.
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         raise ValueError(f"Не удалось открыть видео: {video_path}")
@@ -116,22 +152,26 @@ def process_video_obb_tracking(
     print(f"Трекинг: {tracker}")
     print(f"frame_step={frame_step}, conf={conf}, iou={iou}")
 
+    # Основные накопители результатов обработки.
     samples = []
     tracks_dict = {}
     processed_frame_counter = 0
     frame_index = 0
 
     while True:
+        # Читаем следующий кадр.
         ret, frame = cap.read()
         if not ret:
             break
 
+        # Пропускаем кадры согласно frame_step.
         if frame_step > 1 and (frame_index % frame_step != 0):
             frame_index += 1
             continue
 
         time_sec = frame_index / fps if fps > 0 else 0.0
 
+        # Запускаем YOLO-трекинг на текущем кадре.
         results = model.track(
             source=frame,
             persist=True,
@@ -142,21 +182,24 @@ def process_video_obb_tracking(
         )
         result = results[0]
 
+        # Извлекаем все OBB-детекции из результата модели.
         detections = extract_tracked_obb_instances(result, frame.shape)
 
         processed_detections = []
+        # Фильтрация и вычисление quality score.
         for det in detections:
             if det["track_id"] is None and not save_untracked:
                 continue
 
             if not is_valid_detection_for_tracking_save(
-                det,
-                frame.shape,
-                min_conf=min_conf_for_save,
-                min_area_ratio=min_area_ratio
+                    det,
+                    frame.shape,
+                    min_conf=min_conf_for_save,
+                    min_area_ratio=min_area_ratio
             ):
                 continue
 
+            # Вычисляем признаки качества объекта.
             features, scores, crop = compute_quality_obb(frame, det)
 
             processed_det = {
@@ -188,6 +231,7 @@ def process_video_obb_tracking(
             processed_detections.append(processed_det)
 
             track_id = det["track_id"]
+            # Сохраняем detection в историю соответствующего трека.
             if track_id is not None:
                 if track_id not in tracks_dict:
                     tracks_dict[track_id] = {
@@ -244,17 +288,30 @@ def process_video_obb_tracking(
         "tracks": tracks,
     }
 
+
 def filter_tracks(tracks, min_track_length=5):
+    """
+    Оставляет только треки,
+    содержащие достаточное количество кадров.
+    """
+
     filtered = []
     for track in tracks:
         if len(track["frames"]) >= min_track_length:
             filtered.append(track)
     return filtered
 
+
 def rank_frames_within_tracks(tracks):
+    """
+    Сортирует кадры внутри каждого трека по quality score
+    и назначает им локальный ранг.
+    """
+
     ranked_tracks = []
 
     for track in tracks:
+        # Сортируем кадры трека по итоговому quality score.
         frames_sorted = sorted(
             track["frames"],
             key=lambda x: x["scores"]["final"],
@@ -262,6 +319,7 @@ def rank_frames_within_tracks(tracks):
         )
 
         enriched_frames = []
+        # Добавляем ранг кадра внутри трека.
         for rank_idx, item in enumerate(frames_sorted, start=1):
             new_item = {
                 **item,
@@ -270,6 +328,7 @@ def rank_frames_within_tracks(tracks):
             }
             enriched_frames.append(new_item)
 
+        # Сохраняем лучший кадр трека и его метрики.
         ranked_tracks.append({
             **track,
             "frames": enriched_frames,
@@ -278,6 +337,7 @@ def rank_frames_within_tracks(tracks):
             "track_length": len(enriched_frames),
         })
 
+    # Сортируем сами треки по качеству лучшего кадра.
     ranked_tracks = sorted(
         ranked_tracks,
         key=lambda x: x["best_score"] if x["best_score"] is not None else -1,
@@ -286,14 +346,22 @@ def rank_frames_within_tracks(tracks):
 
     return ranked_tracks
 
+
 def summarize_tracks(tracks):
+    """
+    Формирует компактную сводку по каждому треку,
+    используя лучший кадр трека.
+    """
+
     summaries = []
 
     for track in tracks:
+        # Лучший кадр трека после ранжирования.
         best = track.get("best_detection")
         if best is None:
             continue
 
+        # Собираем ключевые характеристики трека.
         summary = {
             "track_id": track["track_id"],
             "track_length": track["track_length"],
@@ -316,17 +384,22 @@ def summarize_tracks(tracks):
     summaries = sorted(summaries, key=lambda x: x["best_score"], reverse=True)
     return summaries
 
-def save_top_results_per_track(
-    video_path,
-    tracks,
-    output_dir="tracked_results",
-    top_tracks=10,
-    top_frames_per_track=3
-):
-    from pathlib import Path
-    import cv2
 
+def save_top_results_per_track(
+        video_path,
+        tracks,
+        output_dir="tracked_results",
+        top_tracks=10,
+        top_frames_per_track=3
+):
+    """
+    Сохраняет лучшие кадры каждого трека:
+    - исходный кадр,
+    - кадр с разметкой,
+    - вырезанный OBB crop.
+    """
     output_dir = Path(output_dir)
+    # Создаём директории для результатов.
     full_dir = output_dir / "full"
     ann_dir = output_dir / "annotated"
     crop_dir = output_dir / "crops"
@@ -337,8 +410,10 @@ def save_top_results_per_track(
 
     saved_tracks = []
 
+    # Берём только top-N лучших треков.
     for track_rank, track in enumerate(tracks[:top_tracks], start=1):
         track_id = track.get("track_id")
+        # Берём только лучшие кадры внутри трека.
         frames = track.get("frames", [])[:top_frames_per_track]
 
         track_result = {
@@ -352,12 +427,14 @@ def save_top_results_per_track(
         }
 
         for frame_rank, item in enumerate(frames, start=1):
+            # Загружаем исходный кадр из видео.
             frame = read_frame(video_path, item.get("frame_index"))
             if frame is None:
                 print(f"[WARN] Не удалось прочитать кадр {item.get('frame_index')}")
                 continue
 
             det = item
+            # Формируем crop и визуализацию детекции.
             crop = crop_rotated_obb(frame, det.get("corners"))
             ann = draw_detection_obb(frame, det)
 
@@ -369,6 +446,7 @@ def save_top_results_per_track(
 
             timestamp = det.get("time_sec", det.get("timestamp"))
 
+            # Формируем имя файла с метаданными трека и кадра.
             base_name = (
                 f"track_{track_id:03d}"
                 f"_trackRank_{track_rank:02d}"
@@ -381,6 +459,7 @@ def save_top_results_per_track(
             ann_path = ann_dir / base_name
             crop_path = crop_dir / base_name
 
+            # Сохраняем все версии изображения на диск.
             cv2.imwrite(str(full_path), frame)
             cv2.imwrite(str(ann_path), ann)
             cv2.imwrite(str(crop_path), crop)
@@ -399,11 +478,12 @@ def save_top_results_per_track(
                 "crop_path": str(crop_path),
             }
 
+            # Добавляем информацию о сохранённом кадре в результат.
             track_result["frames"].append(frame_entry)
 
             print(f"[SAVED] {base_name}")
 
-        # Добавляем трек только если есть сохранённые кадры
+        # Сохраняем трек только если удалось сохранить хотя бы один кадр.
         if track_result["frames"]:
             saved_tracks.append(track_result)
 

@@ -14,52 +14,43 @@ def aggregate_multi_image_predictions(
         whale_key="whale_id",
 ):
     """
-    Агрегирует результаты по нескольким изображениям одного кита.
+    Агрегирует результаты идентификации по нескольким
+    изображениям одного и того же кита.
 
-    per_image_results: список dict-ов, где каждый dict содержит:
-      {
-        "status": "known" | "new_whale",
-        "best_distance": float,
-        "top_k": [
-            {
-                whale_key: str,
-                "distance": float,
-                "best_match_image": str
-            },
-            ...
-        ]
-      }
-
-    whale_key:
-      - "whale_id" для FAISS
-      - "whale_uid" для pgvector
-
-    Логика:
-    - суммируем score = 1/(distance + eps) по киту
-    - aggregated_distance = median(best_distance по кадрам)
-    - если aggregated_distance > threshold => new_whale
+    Позволяет получить более стабильный итоговый результат,
+    чем классификация по одному кадру.
     """
+
+    # Накопители агрегированной статистики по каждому киту.
     whale_scores = defaultdict(float)
     whale_best_distance = {}
     whale_best_image = {}
+    # Лучшие дистанции по каждому query-изображению.
     best_distances = []
 
     for result in per_image_results:
+        # Сохраняем лучшую дистанцию для текущего изображения.
         if "best_distance" in result and result["best_distance"] is not None:
             best_distances.append(float(result["best_distance"]))
 
         for item in result.get("top_k", []):
+            # Идентификатор кандидата-кита.
             whale = item[whale_key]
             dist = float(item["distance"])
             ref_image = item["best_match_image"]
 
+            # Чем меньше distance, тем выше score.
             score = 1.0 / (dist + 1e-6)
+            # Накапливаем вклад кандидата от всех изображений группы.
             whale_scores[whale] += score
 
+            # Для каждого кита сохраняем его лучшее совпадение.
             if whale not in whale_best_distance or dist < whale_best_distance[whale]:
                 whale_best_distance[whale] = dist
                 whale_best_image[whale] = ref_image
 
+    # Если ни одного кандидата найдено не было,
+    # считаем объект новым китом.
     if len(whale_scores) == 0:
         return {
             "status": "new_whale",
@@ -68,11 +59,15 @@ def aggregate_multi_image_predictions(
             "per_image_results": per_image_results,
         }
 
+    # Сортируем китов по накопленному score.
     sorted_whales = sorted(whale_scores.items(), key=lambda x: x[1], reverse=True)
 
+    # Используем медиану лучших дистанций как устойчивую
+    # оценку качества совпадения по всей группе изображений.
     aggregated_distance = float(np.median(best_distances)) if len(best_distances) > 0 else None
     best_whale, best_score = sorted_whales[0]
 
+    # Формируем агрегированный Top-K список кандидатов.
     aggregated_top_k = []
     for whale, score in sorted_whales[:top_k]:
         aggregated_top_k.append({
@@ -82,6 +77,8 @@ def aggregate_multi_image_predictions(
             "best_match_image": whale_best_image[whale],
         })
 
+    # Если итоговая дистанция слишком большая,
+    # считаем что такого кита ещё нет в каталоге.
     if aggregated_distance is None or aggregated_distance > threshold:
         return {
             "status": "new_whale",
@@ -100,6 +97,7 @@ def aggregate_multi_image_predictions(
         "per_image_results": per_image_results,
     }
 
+
 def identify_whale_pgvector(
         model,
         image_path,
@@ -113,15 +111,16 @@ def identify_whale_pgvector(
         threshold=1.2,
 ):
     """
-    Идентификация query-изображения по pgvector.
-
-    threshold здесь для L2-distance по L2-нормированным эмбеддингам.
-    Его нужно калибровать отдельно на validation.
+    Выполняет поиск наиболее похожего кита в каталоге
+    с использованием pgvector и эмбеддингов ReID.
     """
+
+    # Проверяем существование query-изображения.
     image_path = Path(image_path)
     if not image_path.exists():
         raise FileNotFoundError(f"Изображение не найдено: {image_path}")
 
+    # Извлекаем эмбеддинг изображения.
     query_embedding, width, height = get_embedding(
         model=model,
         image_path=image_path,
@@ -129,6 +128,16 @@ def identify_whale_pgvector(
         image_size=image_size,
     )
 
+    # Поиск ближайших эмбеддингов в pgvector.
+    #
+    # Этап 1:
+    #   выбираем search_k ближайших изображений.
+    #
+    # Этап 2:
+    #   оставляем только лучший кадр для каждого кита.
+    #
+    # Этап 3:
+    #   возвращаем итоговый Top-K китов.
     sql = """
     with candidates as (
         select
@@ -166,11 +175,14 @@ def identify_whale_pgvector(
     limit %s;
     """
 
+    # Открываем соединение с PostgreSQL
+    # и регистрируем тип vector.
     conn = psycopg2.connect(**db_config)
     register_vector(conn)
 
     try:
         with conn.cursor() as cur:
+            # Выполняем поиск ближайших эмбеддингов.
             cur.execute(
                 sql,
                 (
@@ -184,11 +196,16 @@ def identify_whale_pgvector(
             )
             rows = cur.fetchall()
 
+        # Если кандидаты не найдены —
+        # каталог не содержит подходящих записей.
         if not rows:
             raise ValueError("Поиск не вернул кандидатов")
 
+        # Лучший найденный кандидат.
         best_whale_id, best_whale_uid, _, best_image_path, best_distance = rows[0]
 
+        # Если дистанция превышает порог,
+        # считаем что найден новый кит.
         if best_distance > threshold:
             return {
                 "status": "new_whale",
@@ -197,6 +214,7 @@ def identify_whale_pgvector(
                 "nearest_known_image": best_image_path,
             }
 
+        # Формируем итоговый Top-K список совпадений.
         top_results = []
         for whale_id, whale_uid, catalog_image_id, ref_image_path, distance in rows:
             top_results.append({
@@ -214,8 +232,10 @@ def identify_whale_pgvector(
             "top_k": top_results,
         }
 
+    # Всегда закрываем соединение с БД.
     finally:
         conn.close()
+
 
 def identify_whale_group_pgvector(
         model,
@@ -229,9 +249,18 @@ def identify_whale_group_pgvector(
         search_k=50,
         threshold=1.2,
 ):
+    """
+    Выполняет идентификацию по группе изображений кита.
+
+    Каждый кадр ищется отдельно, после чего результаты
+    агрегируются в единое решение.
+    """
+
+    # Результаты поиска для каждого изображения.
     per_image_results = []
 
     for image_path in image_paths:
+        # Выполняем поиск по одному изображению.
         result = identify_whale_pgvector(
             model=model,
             image_path=image_path,
@@ -244,9 +273,13 @@ def identify_whale_group_pgvector(
             search_k=search_k,
             threshold=threshold,
         )
+        # Сохраняем путь исходного изображения,
+        # чтобы можно было анализировать результаты позже.
         result["query_image"] = str(image_path)
         per_image_results.append(result)
 
+    # Объединяем результаты всех изображений
+    # в единый итоговый прогноз.
     aggregated = aggregate_multi_image_predictions(
         per_image_results=per_image_results,
         top_k=top_k,
